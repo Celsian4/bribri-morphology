@@ -6,7 +6,7 @@ from tokenizers.trainers import BpeTrainer
 # Create a tokenizer
 tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
 tokenizer.pre_tokenizer = Whitespace()
-trainer = BpeTrainer(special_tokens=["[PAD]", "[CLS]", "[SEP]", "[MASK]", "[UNK]"], vocab_size=600)
+trainer = BpeTrainer(special_tokens=["[PAD]", "[CLS]", "[SEP]", "[MASK]", "[UNK]"])
 tokenizer.train(files = ["bribri-conllu-20240314-text.txt"], trainer = trainer)
 
 # Tokenize the conllu file
@@ -17,3 +17,5 @@ with open("bribri-conllu-20240314-text.txt", "r") as f:
          for word in words:
             f2.write("+".join(tokenizer.encode(word).tokens) + " ")
          f2.write("\n")
+
+print(tokenizer.get_vocab_size())
