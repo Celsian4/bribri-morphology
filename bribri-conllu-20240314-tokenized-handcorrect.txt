@@ -84,7 +84,7 @@
 # Aû , kèq ye' dör bikâkala 
 # À éql , ¿ ìs ba ts+o' ? 
 # ¿ Ì kũéxkĩ kë̀ ba d+ëʼ bö́kali baloʼ yàne̱ a̱ ? 
-# Ye' ishtir+ìn+ẽ tãîx kãnèx kũéxkĩ , e' tã ñã ẽ+' t+ë'+wã dìwö kúl . 
+# Ye' ishtir+ìn+ẽ tãîx kãnèx kũéxkĩ , e' tã ñã ẽ' t+ë'+wã dìwö kúl . 
 # ¿ Ìs i bák ? 
 # Bua'+ë i bák . 
 # Sts+èqn+ẽ , kalòqt+èqn+ẽ , ĩñã' ñ+àqn+ẽ ẽnã ãlòx y+àn+ẽ . 
@@ -158,28 +158,28 @@
 * Ye' m+ìx+nẽ i al+ök 
 # Ye' m+ìx+nẽ i alóqk+mãlẽ 
 # ¿ Ióqk ie' m+ìx+nẽ ? I al+óqk . 
-? S+kuóqk 
-? S+awök 
-? Y+awök 
-# K+uök 
-# S+ãũk 
-# M+ãũk 
-# T+ãũk 
-# Apàt+ãũk 
+? Sk+u+óqk 
+# S+aw+ök 
+# Y+aw+ök 
+# Ku+ök 
+# S+ã+ũk 
+# M+ã+ũk 
+# T+ã+ũk 
+# Apàt+ã+ũk 
 # Bua'+ũk 
 # Ujt+óqk+wã 
 # Pp+óqk 
 # Isht+óqk 
 # Ch+óqk 
-# Sibòqch+ök 
+# Sibòq+ch+ök 
 # S+ùxn+ũk 
 # Al+ìn+ũk 
 # Ñ+àxn+ũk 
 # K+ìt+ũk 
 # E' tã ye' ts+o t+úxn+ũk 
 # I' tã be' ts+o ch+kóqk 
-# I' tã be' kèq k+ũ ch+kóqk 
-# I' tã kèq be' k+ũ ch+kóqk 
+# I' tã be' kèq k+ũ chk+óqk 
+# I' tã kèq be' k+ũ chk+óqk 
 # Ie' b+ák àrros ñ+ũk 
 # Kèq sa' k+ũ'+bak sh+kóqk 
 # Ye' ts+o ĩn+úxk 
