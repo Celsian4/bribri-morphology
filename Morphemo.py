@@ -1,5 +1,4 @@
 import numpy as np
-import Morphemo
 from math import log10
 
 class Morphemo:
@@ -22,15 +21,23 @@ class Morphemo:
 
       # load morpheme frequency data
       self.morph_freq_data = self.morphemes_percentage(morph_file)
-
-   def word_cutter(self, word : str, start_token : str, end_token : str) -> list[str]:
+   
+   @staticmethod
+   def word_cutter(word : str, start_token : str, end_token : str) -> list[str]:
       return [start_token] + [*word.lower()] + [end_token]
 
-   def probability_loader(self, *text_files : str, filter_token : str = None, lookahead : int = 1) -> np.ndarray:
+   @staticmethod
+   def probability_loader(*text_files : str, filter_token : str = None, lookahead : int = 2) -> None:
+      @staticmethod
+      def word_cutter(word : str, start_token : str, end_token : str) -> list[str]:
+         return [start_token] + [*word.lower()] + [end_token]
+
       # read in each text file
       text : list[str] = []
       words : list[list[str]] = []
+
       for text_file in text_files:
+         print(text_file)
          if not text_file.endswith(".txt"):
             raise ValueError("Only text files are accepted.")
          else:
@@ -38,28 +45,36 @@ class Morphemo:
                text += f.readlines()
       
          # Process text into a list of words (as lists of characters)
-         text = [line.strip() for line in text]
-         
-         for line in text:
-            for word in line.split():
-               words += [self.word_cutter(word, "<s>", "</s>")]
+      text = [line.strip() for line in text]
 
-      # enumerate all characters and assign an index to them
-      set_chars = set([char for word in words for char in word])
-      char_to_index = {char : i for i, char in enumerate(sorted(set_chars))}
+      for line in text:
+         for word in line.split():
+            words += [word_cutter(word, "<s>", "</s>")]
+
+      # create a set of all characters in the text and subsequent ahead
+      set_chars : set[str] = set()
+      dict_chars : dict[str, dict[tuple[str], float]] = {}
+
+      for word in words:
+         print(word)
+         for i in range(1, len(word) - lookahead):
+            set_chars.add(word[i])
+            ahead_tuple : tuple[str] = tuple(word[i+1:i+lookahead+1])
+            if word[i] not in dict_chars:
+               dict_chars[word[i]] = {}
+            if ahead_tuple in dict_chars[word[i]]:
+               dict_chars[word[i]][ahead_tuple] += 1
+            else:
+               dict_chars[word[i]][ahead_tuple] = 1
+
+      for char in dict_chars:
+         total = sum(dict_chars[char].values())
+         for ahead_tuple in dict_chars[char]:
+            dict_chars[char][ahead_tuple] = log10(dict_chars[char][ahead_tuple] / total)
+
+      print(dict_chars)
 
       # create np array of probabilities (row = previous char, column = next char)
-      probabilities = np.zeros((len(set_chars), len(set_chars)))
-      
-      for word in words:
-         for i in range(1, len(word)):
-            probabilities[char_to_index[word[i-1]], char_to_index[word[i]]] += 1
-
-      # normalize the probabilities
-      np.log10(np.divide(probabilities,np.sum(probabilities)), out=probabilities, where=probabilities!=0)
-      probabilities[probabilities==0] = 2 * np.min(probabilities[probabilities!=0])
-
-      return probabilities, char_to_index
 
    def morphemes_percentage(self, morpheme_file : str) -> np.ndarray:
       with open(morpheme_file, 'r', encoding="utf8") as f:
@@ -108,11 +123,9 @@ class Morphemo:
       return base_prob
 
 if __name__ == '__main__':
-   morphemo : Morphemo = Morphemo("bribri-unmarked-text.txt", morph_file="bribri-conllu-20240314-tokenized-handcorrect.txt")
    
+   Morphemo.probability_loader("bribri-unmarked-text.txt")
    
-   print(morphemo.morpheme_guess("Sibòq"))
-   print(morphemo.morpheme_guess("yéq"))
 
    
 
