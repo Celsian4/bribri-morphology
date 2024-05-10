@@ -3,30 +3,62 @@ import Morphemo
 from math import log10
 
 class Morphemo:
-   start_token : str
-   end_token : str
-   text_prob : np.ndarray
-   text_index : dict[str, int]
-   morph_prob : np.ndarray
-   morph_index : dict[str, int]
+   """
+   Morphemo class is a class that predicts the likelihood of morpheme boundaries in a word given the environment.
+   """
+   # tokens
+   start_token : str = "<s>"
+   end_token : str = "</s>"
+   morph_token : str = "+"
+   # text probabilities
+   text_forward_prob : np.ndarray
+   text_backward_prob : np.ndarray
+   text_forward_index : dict[str, int]
+   text_backward_index : dict[str, int]
+   # morph probabilities
+   morph_forward_prob : np.ndarray
+   morph_backward_prob : np.ndarray
+   morph_forward_index : dict[str, int]
+   morph_backward_index : dict[str, int]
+   # morph frequency data
    morph_freq_data : np.ndarray
+   # lookahead
+   lookahead : int = 2
 
-   def __init__(self, *text_files : str, morph_file : str, start_token : str = "<s>", end_token : str = "</s>"):
-      # load text and morpheme probabilities
-      self.text_prob, self.text_index = self.probability_loader(*text_files)
-      self.morph_prob, self.morph_index = self.probability_loader(morph_file)
+   def __init__(self, *text_files : str, morph_file : str, start_token : str = "<s>", end_token : str = "</s>", morph_token : str = "+", lookahead : int = 2):
+      
+      self.lookahead = lookahead
+      # load text probabilities (same indices because it is a square matrix)
+      self.text_forward_prob, self.text_forward_index, temp = self.probability_loader(*text_files, lookahead=lookahead)
+      self.text_backward_prob, temp, self.text_backward_index = self.probability_loader(*text_files, reversed=True, lookahead=lookahead)
 
-      # set start and end tokens
+      # load morpheme probabilities
+      self.morph_forward_prob, self.morph_forward_index, temp = self.probability_loader(morph_file, filter_token="+", lookahead=1)
+      self.morph_backward_prob, temp, self.morph_backward_index = self.probability_loader(morph_file, filter_token="+", reversed=True, lookahead=lookahead)
+
+      # set start, end, morphology tokens
       self.start_token = start_token
       self.end_token = end_token
+      self.morph_token = morph_token
 
       # load morpheme frequency data
       self.morph_freq_data = self.morphemes_percentage(morph_file)
 
-   def word_cutter(self, word : str, start_token : str, end_token : str) -> list[str]:
-      return [start_token] + [*word.lower()] + [end_token]
+   def probability_loader(self, *text_files : str, filter_token : str = None, lookahead : int = 1, reversed : bool = False) -> np.ndarray:
+      """
+      Loads text files and calculates the probability of each x-gram following another character.
 
-   def probability_loader(self, *text_files : str, filter_token : str = None, lookahead : int = 1) -> np.ndarray:
+      Parameters:
+      @param text_files: list of text files to be loaded
+      @param pre_token: token to be used as a filter for the previous character
+      @param post_token: token to be used as a filter for the x-gram
+      @param lookahead: number of characters to look ahead (x-gram size)
+
+      Returns:
+      @return probabilities: np array of probabilities
+      """
+      # accounts for non-inclusive range
+
       # read in each text file
       text : list[str] = []
       words : list[list[str]] = []
@@ -42,24 +74,59 @@ class Morphemo:
          
          for line in text:
             for word in line.split():
-               words += [self.word_cutter(word, "<s>", "</s>")]
+               words += [self.word_cutter(word, self.start_token, self.end_token)]
+
+      # TODO: add lookahead functionality to grab x-grams
+      # TODO: change
 
       # enumerate all characters and assign an index to them
-      set_chars = set([char for word in words for char in word])
-      char_to_index = {char : i for i, char in enumerate(sorted(set_chars))}
+      set_chars : set[str] = set()
+      set_grams : set[tuple[str]] = set()
+      chars_grams : dict[str, dict[tuple[str], int]] = {}
+      
+      # load the characters and grams into dictionaries (one-pass)
+      for word in words:
+         for i in range(0, len(word)):
+            set_chars.add(word[i])
+            if i < len(word)-lookahead:
+               gram = tuple(word[i+1:i+lookahead+1])
+               set_grams.add(gram)
+
+               # new gram
+               if word[i] not in chars_grams:
+                  chars_grams[word[i]] = {}
+               if gram not in chars_grams[word[i]]:
+                  chars_grams[word[i]][gram] = 0
+               
+               # increment gram count
+               chars_grams[word[i]][gram] += 1
+
+      char_to_index : dict[int, str]= {char : i for i, char in enumerate(sorted(set_chars))}
+      gram_to_index : dict[int, tuple[str]] = {gram : i for i, gram in enumerate(sorted(set_grams))}
 
       # create np array of probabilities (row = previous char, column = next char)
-      probabilities = np.zeros((len(set_chars), len(set_chars)))
-      
-      for word in words:
-         for i in range(1, len(word)):
-            probabilities[char_to_index[word[i-1]], char_to_index[word[i]]] += 1
+      probabilities : np.ndarray = np.zeros((len(set_chars), len(set_grams)))
 
+      # update the probabilities array
+      for char in chars_grams:
+         for gram in chars_grams[char]:
+            count = chars_grams[char][gram]
+            probabilities[char_to_index[char], gram_to_index[gram]] = count
+
+      # transform the array if looking backwards
+      if reversed:
+         probabilities = np.transpose(probabilities)
+      
       # normalize the probabilities
-      np.log10(np.divide(probabilities,np.sum(probabilities)), out=probabilities, where=probabilities!=0)
+      for row in probabilities:
+         np.log10(np.divide(row,np.sum(row)), out=row, where=row!=0)
       probabilities[probabilities==0] = 2 * np.min(probabilities[probabilities!=0])
 
-      return probabilities, char_to_index
+      # filter the probabilities if a token is specified
+      if filter_token is not None:
+         probabilities = probabilities.take([char_to_index[filter_token]], axis=1, mode='clip')
+
+      return probabilities, char_to_index, gram_to_index
 
    def morphemes_percentage(self, morpheme_file : str) -> np.ndarray:
       with open(morpheme_file, 'r', encoding="utf8") as f:
@@ -97,23 +164,65 @@ class Morphemo:
       morph_freq_data[morph_freq_data==0] = 2 * np.min(morph_freq_data[morph_freq_data!=0])
 
       return morph_freq_data
-   
-   def morpheme_guess(self, word : str) -> float:
-      # cut word into characters
-      word = self.word_cutter(word, self.start_token, self.end_token)
-      
-      base_prob : float = 0
-      [base_prob := base_prob + self.text_prob[self.text_index[word[i-1]], self.text_index[word[i]]] for i in range(1, len(word))]
 
-      return base_prob
+   def predict(self, word : str) -> str:
+      word = self.word_cutter(word, self.start_token, self.end_token)
+
+      base_prob : list[float] = [0] * (len(word) - self.lookahead)
+
+      for i in range(0, len(word) - self.lookahead):
+         base_prob[i] = self.point_prob(word[i], tuple(word[i+1:i+self.lookahead+1]))
+      
+      # calculate morpheme probabilities
+      morph_prob : list[float] = [0] * (len(word) - self.lookahead)
+      for i in range(0, len(word) - self.lookahead):
+         morph_prob[i] = self.morph_prob(word[i], tuple(word[i+1:i+self.lookahead+1]))
+
+      print(morph_prob)
+
+
+   def point_prob(self, before : str, after : tuple[str]) -> float:
+      forward : float
+      backward : float
+
+      # calculate forward looking probability
+      if before in self.text_forward_index and after in self.text_backward_index:
+         forward = self.text_forward_prob[self.text_forward_index[before], self.text_backward_index[after]]
+      else:
+         forward = self.text_forward_prob.min()
+      # calculate backward looking probability
+      if after in self.text_backward_index and before in self.text_forward_index:
+         backward = self.text_backward_prob[self.text_backward_index[after], self.text_forward_index[before]]
+      else:
+         backward = self.text_backward_prob.min()
+
+      return forward + backward
+   
+   def morph_prob(self, before : str, after : str) -> float:
+         forward : float
+         backward : float
+         # calculate forward looking probability
+         if before in self.morph_forward_index:
+            forward = self.morph_forward_prob[self.morph_forward_index[before]][0]
+         else:
+            forward = self.morph_forward_prob.min()
+
+         # calculate backward looking probability
+         if after in self.morph_backward_index:
+            backward = self.morph_backward_prob[self.morph_backward_index[after]][0]
+         else:
+            backward = self.morph_backward_prob.min()
+         
+         return forward + backward
+   
+   @staticmethod
+   def word_cutter(word : str, start_token : str, end_token : str) -> list[str]:
+      return [start_token] + [*word.lower()] + [end_token]
+         
 
 if __name__ == '__main__':
    morphemo : Morphemo = Morphemo("bribri-unmarked-text.txt", morph_file="bribri-conllu-20240314-tokenized-handcorrect.txt")
-   
-   
-   print(morphemo.morpheme_guess("Sibòq"))
-   print(morphemo.morpheme_guess("yéq"))
-
+   morphemo.predict("shkèxnã")
    
 
       
