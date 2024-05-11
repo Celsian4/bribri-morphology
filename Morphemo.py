@@ -24,9 +24,12 @@ class Morphemo:
    morph_freq_data : np.ndarray
    # lookahead
    lookahead : int = 2
+   # unseen bias
+   UNSEEN_BIAS : float = 2
 
-   def __init__(self, *text_files : str, morph_file : str, start_token : str = "<s>", end_token : str = "</s>", morph_token : str = "+", lookahead : int = 2):
+   def __init__(self, *text_files : str, morph_file : str, start_token : str = "<s>", end_token : str = "</s>", morph_token : str = "+", lookahead : int = 2, UNSEEN_BIAS : float = 2):
       
+      self.UNSEEN_BIAS = UNSEEN_BIAS
       self.lookahead = lookahead
       # load text probabilities (same indices because it is a square matrix)
       self.text_forward_prob, self.text_forward_index, temp = self.probability_loader(*text_files, lookahead=lookahead)
@@ -120,7 +123,7 @@ class Morphemo:
       # normalize the probabilities
       for row in probabilities:
          np.log10(np.divide(row,np.sum(row)), out=row, where=row!=0)
-      probabilities[probabilities==0] = 2 * np.min(probabilities[probabilities!=0])
+      probabilities[probabilities==0] = self.UNSEEN_BIAS * np.min(probabilities[probabilities!=0])
 
       # filter the probabilities if a token is specified
       if filter_token is not None:
@@ -157,29 +160,45 @@ class Morphemo:
       for word_length, morph_count in morpheme_freq:
          morph_freq_data[word_length, morph_count] += 1
 
+      # reduce the effect of length bias
+      np.sqrt(morph_freq_data, out=morph_freq_data, where=morph_freq_data!=0)
+
       for row in morph_freq_data:
          if np.sum(row) != 0:
             np.log10(row / np.sum(row), out=row, where=row!=0)
 
-      morph_freq_data[morph_freq_data==0] = 2 * np.min(morph_freq_data[morph_freq_data!=0])
+      morph_freq_data[morph_freq_data==0] = self.UNSEEN_BIAS * np.min(morph_freq_data[morph_freq_data!=0])
+
+      print(morph_freq_data)
 
       return morph_freq_data
 
-   def predict(self, word : str) -> str:
-      word = self.word_cutter(word, self.start_token, self.end_token)
+   def predict_word(self, raw_word : str) -> str:
+      word : list[str] = self.word_cutter(raw_word, self.start_token, self.end_token)
 
+      # calculate base probabilities
       base_prob : list[float] = [0] * (len(word) - self.lookahead)
-
       for i in range(0, len(word) - self.lookahead):
          base_prob[i] = self.point_prob(word[i], tuple(word[i+1:i+self.lookahead+1]))
       
       # calculate morpheme probabilities
-      morph_prob : list[float] = [0] * (len(word) - self.lookahead)
+      morph_prob : list[tuple[int, float]] = [0] * (len(word) - self.lookahead)
       for i in range(0, len(word) - self.lookahead):
-         morph_prob[i] = self.morph_prob(word[i], tuple(word[i+1:i+self.lookahead+1]))
+         morph_prob[i] = (self.morph_prob(word[i], tuple(word[i+1:i+self.lookahead+1])), i)
 
-      print(morph_prob)
+      morph_prob.sort(key=lambda x: x[0], reverse=True)
 
+      # determine likelihood of morphemes that are present
+      n_morphemes : int = 0
+      morph_indexes : list[int] = []
+      for morph, i in morph_prob:
+         if base_prob[i] + self.get_morph_count_freq(len(word), n_morphemes) < morph + self.get_morph_count_freq(len(word), n_morphemes+1):
+            n_morphemes += 1
+            morph_indexes.append(i+1)
+
+      morphed : list[str] = self.word_morpher(word, self.morph_token, sorted(morph_indexes))
+
+      return "".join(morphed[1:len(morphed)-1])
 
    def point_prob(self, before : str, after : tuple[str]) -> float:
       forward : float
@@ -199,30 +218,83 @@ class Morphemo:
       return forward + backward
    
    def morph_prob(self, before : str, after : str) -> float:
-         forward : float
-         backward : float
-         # calculate forward looking probability
-         if before in self.morph_forward_index:
-            forward = self.morph_forward_prob[self.morph_forward_index[before]][0]
-         else:
-            forward = self.morph_forward_prob.min()
+      forward : float
+      backward : float
+      # calculate forward looking probability
+      if before in self.morph_forward_index:
+         forward = self.morph_forward_prob[self.morph_forward_index[before]][0]
+      else:
+         forward = self.morph_forward_prob.min()
 
-         # calculate backward looking probability
-         if after in self.morph_backward_index:
-            backward = self.morph_backward_prob[self.morph_backward_index[after]][0]
-         else:
-            backward = self.morph_backward_prob.min()
-         
-         return forward + backward
+      # calculate backward looking probability
+      if after in self.morph_backward_index:
+         backward = self.morph_backward_prob[self.morph_backward_index[after]][0]
+      else:
+         backward = self.morph_backward_prob.min()
+      
+      return forward + backward
    
+   def get_morph_count_freq(self, word_length : int, morph_count : int) -> float:
+      '''
+      Returns the frequency of a morpheme count given a word length.
+      
+      Parameters:
+      @param word_length: length of the word
+      @param morph_count: number of morphemes in the word
+      
+      Returns:
+      @return frequency: frequency of the morpheme count given the word length (min val if not found)
+      '''
+      if word_length >= self.morph_freq_data.shape[0] or morph_count >= self.morph_freq_data.shape[1]:
+         return self.UNSEEN_BIAS * np.min(self.morph_freq_data)
+      return self.morph_freq_data[word_length, morph_count]
+
    @staticmethod
    def word_cutter(word : str, start_token : str, end_token : str) -> list[str]:
+      """
+      Cuts a word into a list of characters with start and end tokens.
+      
+      Parameters:
+      @param word: string representing a word
+      @param start_token: token to be inserted at the beginning of the word
+      @param end_token: token to be inserted at the end of the word
+      
+      Returns:
+      @return word: list of characters with start and end tokens
+      """
       return [start_token] + [*word.lower()] + [end_token]
+   
+   @staticmethod
+   def word_morpher(word : list[str] | str, morph_token : str, morph_locations : list[int]) -> list[str]:
+      """
+      Inserts morpheme tokens into a word at specified locations.
+
+      Parameters:
+      @param word: list of characters representing a word
+      @param morph_token: token to be inserted as morpheme boundary
+      @param morph_locations: list of indices where the morpheme token should be inserted
+
+      Returns:
+      @return word: list of characters with morpheme tokens inserted
+      """
+      insert_count : int = 0
+      
+      for i in morph_locations:
+         word.insert(i + insert_count, morph_token)
+         insert_count += 1
+
+      return word
          
 
 if __name__ == '__main__':
-   morphemo : Morphemo = Morphemo("bribri-unmarked-text.txt", morph_file="bribri-conllu-20240314-tokenized-handcorrect.txt")
-   morphemo.predict("shkèxnã")
+   morphemo : Morphemo = Morphemo("bribri-unmarked-text.txt", morph_file="bribri-conllu-20240314-tokenized-handcorrect.txt", UNSEEN_BIAS=2)
+   print(morphemo.predict_word("shkèxnã"))
+   print(morphemo.predict_word("ujtóqkwã"))
+   print(morphemo.predict_word("bua'ë"))
+   print(morphemo.predict_word("kie"))
+   print(morphemo.predict_word("daléqnẽ"))
+   print(morphemo.predict_word("akéqkëpa"))
+   print(morphemo.predict_word("stsö"))
    
 
       

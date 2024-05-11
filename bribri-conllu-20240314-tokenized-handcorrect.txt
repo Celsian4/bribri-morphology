@@ -27,11 +27,11 @@
 # I' dör ye' ajkà bata 
 # Awápa shk+èxn+ã bua'+ë . 
 # Ie'+pa ajkà batà dör Figueroa 
-# ¿ Ìs be' ts+o , Carlos ? 
-# Ye' ts+o bua' . 
-# ¿ Ìs be' ts+o e's ? 
+# ¿ Ìs be' tso , Carlos ? 
+# Ye' tso bua' . 
+# ¿ Ìs be' tso e's ? 
 # Ye' kèq k+ũ bua' 
-# Ye' ts+o dawèie . 
+# Ye' tso dawèie . 
 # ¿ Wèxs be' d+e ? 
 # Tãîx ye' ã tawàlia i+èqn+ã . 
 # Bóqkali nãñéx+we bakali' ẽ' t+ẽ'+wa dakarò wé ã ... 
@@ -43,13 +43,13 @@
 # E' dör Juan 
 # Kèq ye' dör Juan 
 # Ye' kèq dör Juan 
-# Bakali' ts+o 
-# Ye' ts+o sulû 
-# Ye' ts+o káxmîx 
+# Bakali' tso 
+# Ye' tso sulû 
+# Ye' tso káxmîx 
 # Ie' dör bua' 
-# Ie' ts+o bua' 
+# Ie' tso bua' 
 # Káx batà dör sĩêx 
-# Ie' ts+o bua' 
+# Ie' tso bua' 
 # Ie' kèq k+ũ bua' 
 # Kèq ie' k+ũ bua' 
 # Ie' bák bua' 
@@ -60,14 +60,14 @@
 # Ie' s+úx ye' tö 
 # Be' dör ie' s+úx 
 # Be' r ie' s+úx 
-# Ie'+pa ts+o stsa'+wö wé ã 
+# Ie'+pa tso stsa'+wö wé ã 
 # Ye' d+ë' Talók ù ã 
-# Ie'+pa ts+o Yèqri 
+# Ie'+pa tso Yèqri 
 # Ye' d+ë' Ãmùxbali 
 # Ie' tö shkãmẽ' yö' ye' ã 
 # Ye' tö sawéq k+óqt+wã ie' yòqkĩ 
 # Ye' d+ë' ie' yòqkĩ 
-# ¿ Ìs ie' ts+o ? 
+# ¿ Ìs ie' tso ? 
 # ¿ be' dör Juan ? 
 # Be' dör Juan 
 # ¿ Juan be' dör ? 
@@ -82,7 +82,7 @@
 # ¿ Ì i' dör ? 
 # ¿ Kèq be' dör bikâkala ? 
 # Aû , kèq ye' dör bikâkala 
-# À éql , ¿ ìs ba ts+o' ? 
+# À éql , ¿ ìs ba tso' ? 
 # ¿ Ì kũéxkĩ kë̀ ba d+ëʼ bö́kali baloʼ yàne̱ a̱ ? 
 # Ye' ishtir+ìn+ẽ tãîx kãnèx kũéxkĩ , e' tã ñã ẽ' t+ë'+wã dìwö kúl . 
 # ¿ Ìs i bák ? 
@@ -105,7 +105,7 @@
 # Ba k+úx 
 # Ĩ mãléxk 
 # Sã ùx 
-# I ts+o' bua' 
+# I tso' bua' 
 # Kèq i k+ũ' bua' 
 # Ie' ts+o'+tke bua' 
 # Ie' ki+e Carlos 
@@ -137,14 +137,14 @@
 # Ye' shk+a' d+òq tsáxlĩ díwö skéxl 
 # Ye' shk+a' d+òq Talók ù ã 
 # Éwa , Carlos . 
-# ¿ Ì wámbal+ök be' ts+o ? 
-# Ye' ts+o ye' tabè yul+ök . 
+# ¿ Ì wámbal+ök be' tso ? 
+# Ye' tso ye' tabè yul+ök . 
 # ¿ i' dör be' tabè ? 
 # Tóq . 
 # Séx dör ye' tabè . 
 # ¿ be' kèq k+ũ i wàkãnéx+ũk ? 
 # Aû , ye' kèq k+ũ i wàkãnéx+ũk . 
-* Ye' ts+o kãnèx+bal+ök sàchö wa . 
+* Ye' tso kãnèx+bal+ök sàchö wa . 
 # Íke . 
 # Wë'ste . 
 # Ye' míx+ã+tke . 
@@ -176,13 +176,13 @@
 # Al+ìn+ũk 
 # Ñ+àxn+ũk 
 # K+ìt+ũk 
-# E' tã ye' ts+o t+úxn+ũk 
-# I' tã be' ts+o ch+kóqk 
+# E' tã ye' tso t+úxn+ũk 
+# I' tã be' tso ch+kóqk 
 # I' tã be' kèq k+ũ chk+óqk 
 # I' tã kèq be' k+ũ chk+óqk 
-# Ie' b+ák àrros ñ+ũk 
+# Ie' bákàrros ñ+ũk 
 # Kèq sa' k+ũ'+bak sh+kóqk 
-# Ye' ts+o ĩn+úxk 
+# Ye' tso ĩn+úxk 
 # Ye' kèq k+ũ ĩn+úxk 
 # Ye' d+á ikuòq kuá tk+ök 
 # Shk+èxn+ã 
@@ -249,11 +249,11 @@
 # Ye' kèq sts+è+nẽ 
 # Ye' kèq wã ù s+ùx+nẽ 
 # Skuèq t+ã' 
-# Ĩnúxköl b+ák 
+# Ĩnúxköl bák
 # Ie' k+ué+kã 
 # Apà+i+o dör ye' icha 
 # Ye' icha dör sarûrû 
-# Púx b+ák s+a' kat+óqk ĩâxchki 
+# Púx báks+a' kat+óqk ĩâxchki 
 # E' shùx ã ie'+pa wã kàl wóqlöm m+íx 
 # Ie' dör nĩmàx tk+é cháchá 
 # Nãmùx t+úxn kôqtkkôqtk 
@@ -309,7 +309,7 @@ kéxwe tã sa' tö tsiru' wòq t+è+kẽ i tsak+è+kẽ ¡ é ! i mã shk+óqw�
 # ye' nãlàx e' d+ör 
 # E' bikéx r+ö ñã wã , 
 # Ya Sulé káx ska e' bikéx r+ö ñã wã . 
-# E' ts+o'+sẽn+kã káx íjkë tã ye' ts+o' . 
+# E' ts+o'+sẽn+kã káx íjkë tã ye' tso' . 
 # Káx íxẽ d+ö káx ñ+ĩr e' tã yì shk+éxr 
 # ye' shk+éxr . 
 # Káxbulu káx ñ+ĩr káxbulur e' tã ye' shk+éxr . 
