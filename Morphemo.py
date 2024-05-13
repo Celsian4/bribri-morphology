@@ -1,6 +1,5 @@
 import numpy as np
 import Morphemo
-from math import log10
 
 class Morphemo:
    """
@@ -92,7 +91,14 @@ class Morphemo:
          for i in range(0, len(word)):
             set_chars.add(word[i])
             if i < len(word)-lookahead:
-               gram = tuple(word[i+1:i+lookahead+1])
+               # account for short morpheme
+               if reversed and self.morph_token in word[i+1:i+lookahead+1]: 
+                  gram_list = word[i+1:i+lookahead+2]
+                  gram_list.remove(self.morph_token)
+                  gram : tuple = tuple(gram_list)
+               else:
+                  gram : tuple = tuple(word[i+1:i+lookahead+1])
+
                set_grams.add(gram)
 
                # new gram
@@ -173,7 +179,7 @@ class Morphemo:
 
       return morph_freq_data
 
-   def predict_word(self, raw_word : str) -> str:
+   def predict_word(self, raw_word : str) -> list[str]:
       word : list[str] = self.word_cutter(raw_word, self.start_token, self.end_token)
 
       # calculate base probabilities
@@ -187,18 +193,25 @@ class Morphemo:
          morph_prob[i] = (self.morph_prob(word[i], tuple(word[i+1:i+self.lookahead+1])), i)
 
       morph_prob.sort(key=lambda x: x[0], reverse=True)
+      for morph in morph_prob:
+         print(f"{morph[0]:.2}, {morph[1]}, {word[morph[1]]}, {word[morph[1]+1:morph[1]+self.lookahead+1]}")
 
       # determine likelihood of morphemes that are present
       n_morphemes : int = 0
       morph_indexes : list[int] = []
       for morph, i in morph_prob:
+         print(base_prob[i] + self.get_morph_count_freq(len(word), n_morphemes), ",", morph + self.get_morph_count_freq(len(word), n_morphemes+1))
          if base_prob[i] + self.get_morph_count_freq(len(word), n_morphemes) < morph + self.get_morph_count_freq(len(word), n_morphemes+1):
             n_morphemes += 1
             morph_indexes.append(i+1)
 
+      return morph_indexes
+
       morphed : list[str] = self.word_morpher(word, self.morph_token, sorted(morph_indexes))
 
-      return "".join(morphed[1:len(morphed)-1])
+      return morphed
+   
+   
 
    def point_prob(self, before : str, after : tuple[str]) -> float:
       forward : float
@@ -215,6 +228,10 @@ class Morphemo:
       else:
          backward = self.text_backward_prob.min()
 
+      # if forward < backward:
+      #    forward = -1 * math.sqrt(abs(forward))
+      # else:
+      #    backward = -1 * math.sqrt(abs(backward))
       return forward + backward
    
    def morph_prob(self, before : str, after : str) -> float:
@@ -231,7 +248,14 @@ class Morphemo:
          backward = self.morph_backward_prob[self.morph_backward_index[after]][0]
       else:
          backward = self.morph_backward_prob.min()
-      
+
+      # if forward < backward:
+      #    forward = -1 * math.sqrt(abs(forward))
+      # else:
+      #    backward = -1 * math.sqrt(abs(backward))
+
+      # TODO: remove debug print
+      #print(f"{before = }, {after = }, \n\t{forward = }, {backward = }")
       return forward + backward
    
    def get_morph_count_freq(self, word_length : int, morph_count : int) -> float:
@@ -245,9 +269,16 @@ class Morphemo:
       Returns:
       @return frequency: frequency of the morpheme count given the word length (min val if not found)
       '''
+
       if word_length >= self.morph_freq_data.shape[0] or morph_count >= self.morph_freq_data.shape[1]:
          return self.UNSEEN_BIAS * np.min(self.morph_freq_data)
       return self.morph_freq_data[word_length, morph_count]
+
+
+   def f1_score():
+      # TODO: implement f1 score calculation
+
+      raise NotImplementedError
 
    @staticmethod
    def word_cutter(word : str, start_token : str, end_token : str) -> list[str]:
@@ -278,25 +309,38 @@ class Morphemo:
       @return word: list of characters with morpheme tokens inserted
       """
       insert_count : int = 0
-      
-      for i in morph_locations:
+
+      for i in sorted(morph_locations):
          word.insert(i + insert_count, morph_token)
          insert_count += 1
 
       return word
-         
+
+   def ortho_morpher(self, word : str) -> str:
+      """
+      Inserts morpheme tokens into a word based on orthographic rules.
+
+      Parameters:
+      @param word: string representing a word
+
+      Returns:
+      @return word: string with morpheme tokens inserted
+      """
+      word_list : list[str] = self.word_cutter(word, self.start_token, self.end_token)
+      morph_locations : list[int] = self.predict_word(word)
+      word_list = self.word_morpher(word_list, self.morph_token, morph_locations)
+
+      return "".join(word_list[1:len(word_list)-1])
 
 if __name__ == '__main__':
-   morphemo : Morphemo = Morphemo("bribri-unmarked-text.txt", morph_file="bribri-conllu-20240314-tokenized-handcorrect.txt", UNSEEN_BIAS=2)
-   print(morphemo.predict_word("shkèxnã"))
-   print(morphemo.predict_word("ujtóqkwã"))
-   print(morphemo.predict_word("bua'ë"))
-   print(morphemo.predict_word("kie"))
-   print(morphemo.predict_word("daléqnẽ"))
-   print(morphemo.predict_word("akéqkëpa"))
-   print(morphemo.predict_word("stsö"))
-   
-
-      
-
-      
+   morphemo : Morphemo = Morphemo("bribri-unmarked-text.txt", morph_file="bribri-conllu-20240314-tokenized-handcorrect.txt", UNSEEN_BIAS=2, lookahead=2)
+   print((morphemo.ortho_morpher("shkèxnã")))
+   print((morphemo.ortho_morpher("ujtóqkwã")))
+   print((morphemo.ortho_morpher("bua'ë")))
+   print((morphemo.ortho_morpher("kie")))
+   print((morphemo.ortho_morpher("daléqnẽ")))
+   print((morphemo.ortho_morpher("akéqkëpa")))
+   print((morphemo.ortho_morpher("stsö")))
+   print((morphemo.ortho_morpher("kalòqtë'")))
+   print((morphemo.ortho_morpher("bikâkala")))
+   print((morphemo.ortho_morpher("akéqpa")))
