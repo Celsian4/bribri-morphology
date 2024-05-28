@@ -1,3 +1,12 @@
+##############################################
+# Author : Carter Anderson
+# Professor : Rolando Coto-Solano
+# Date : 2024-05-27 (YYYY-MM-DD)
+# Purpose : LING48 Final Project, 24S, Dartmouth College
+# Description : This script contains the Morphemo class, which contains
+#    an n-gram based method for predicting morpheme boundaries in a word.
+##############################################
+
 import numpy as np
 import Morphemo
 
@@ -27,6 +36,16 @@ class Morphemo:
    UNSEEN_BIAS : float = 2
 
    def __init__(self, start_token : str = "<s>", end_token : str = "</s>", morph_token : str = "+", lookahead : int = 2, UNSEEN_BIAS : float = 2):
+      """
+      Constructor for Morphemo class.
+      
+      Parameters:
+      @param start_token: token to be inserted at the beginning of the word
+      @param end_token: token to be inserted at the end of the word
+      @param morph_token: token to be inserted as morpheme boundary
+      @param lookahead: number of characters to look ahead in x-gram training
+      @param UNSEEN_BIAS: bias to be applied to unseen data
+      """
       self.UNSEEN_BIAS = UNSEEN_BIAS
       self.lookahead = lookahead
 
@@ -36,6 +55,15 @@ class Morphemo:
       self.morph_token = morph_token
 
    def train(self, untagged_file : str, morph_file : str) -> None:
+      """
+      Trains the model with untagged text and morpheme data.
+      
+      Parameters:
+      @param untagged_file: file containing untagged text
+      @param morph_file: file containing morpheme data
+      """
+
+
       with open(untagged_file, 'r', encoding="utf8") as f:
          untagged_text : str = f.read().split()
 
@@ -115,7 +143,7 @@ class Morphemo:
       
       # normalize the probabilities
       for row in probabilities:
-         np.log10(np.divide(row,np.sum(row)), out=row, where=row!=0)
+         np.log10(np.divide(row,np.sum(row)), out=row, where=np.sum(row))
       probabilities[probabilities==0] = self.UNSEEN_BIAS * np.min(probabilities[probabilities!=0])
 
       # filter the probabilities if a token is specified
@@ -125,6 +153,15 @@ class Morphemo:
       return probabilities, char_to_index, gram_to_index
 
    def morphemes_percentage(self, morphemes : list[str]) -> np.ndarray:
+      """
+      Calculates the frequency of morpheme counts given word lengths.
+
+      Parameters:
+      @param morphemes: list of morphemes
+
+      Returns:
+      @return morph_freq_data: np array of morpheme frequencies
+      """
       morpheme_freq : list[tuple[int, int]] = []
       max_morphemes = 0
       max_wordlength = 0
@@ -159,17 +196,27 @@ class Morphemo:
       return morph_freq_data
 
    def predict_word(self, raw_word : str) -> list[str]:
+      """
+      Predicts the likelihood of morpheme boundaries in a word.
+      
+      Parameters:
+      @param raw_word: string representing a word
+      
+      Returns:
+      @return morph_indexes: list of indices where morpheme boundaries are likely to occur
+      """
+
       word : list[str] = self.word_cutter(raw_word, self.start_token, self.end_token)
 
       # calculate base probabilities
       base_prob : list[float] = [0] * (len(word) - self.lookahead)
       for i in range(0, len(word) - self.lookahead):
-         base_prob[i] = self.point_prob(word[i], tuple(word[i+1:i+self.lookahead+1]))
+         base_prob[i] = self.point_score(word[i], tuple(word[i+1:i+self.lookahead+1]))
       
       # calculate morpheme probabilities
       morph_prob : list[tuple[int, float]] = [0] * (len(word) - self.lookahead)
       for i in range(0, len(word) - self.lookahead):
-         morph_prob[i] = (self.morph_prob(word[i], tuple(word[i+1:i+self.lookahead+1])), i)
+         morph_prob[i] = (self.morph_score(word[i], tuple(word[i+1:i+self.lookahead+1])), i)
 
       morph_prob.sort(key=lambda x: x[0], reverse=True)
 
@@ -183,7 +230,17 @@ class Morphemo:
 
       return morph_indexes
 
-   def point_prob(self, before : str, after : tuple[str]) -> float:
+   def point_score(self, before : str, after : tuple[str]) -> float:
+      """
+      Calculates the score of a location in the word given the grams before and after the point.
+
+      Parameters:
+      @param before: character before the point
+      @param after: character after the point
+
+      Returns:
+      @return score: score of the point
+      """
       forward : float
       backward : float
 
@@ -200,7 +257,17 @@ class Morphemo:
 
       return forward + backward
    
-   def morph_prob(self, before : str, after : str) -> float:
+   def morph_score(self, before : str, after : str) -> float:
+      """
+      Calculates the score of a morpheme boundry given the grams before and after the boundary.
+
+      Parameters:
+      @param before: character before the morpheme boundary
+      @param after: character after the morpheme boundary
+
+      Returns:
+      @return score: score of the morpheme boundary
+      """
       forward : float
       backward : float
       # calculate forward looking probability

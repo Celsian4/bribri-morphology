@@ -38,15 +38,23 @@ class MorphemeScorer:
 
    @staticmethod
    def score(gold_morphemes : list[str], result_morphemes : list[str]) -> tuple[bool, float, float, float]:
-
+      """
+      Score a single morpheme segmentation result against a gold standard.
+      
+      Params:
+      @param gold_morphemes: list of gold standard morphemes
+      @param result_morphemes: list of morphemes from the result
+      
+      Returns:
+      @return: tuple of error, precision, recall, and f1 score
+      """
+      
       # boolean of error, 1 if error, 0 if no error
       error : bool = not(gold_morphemes == result_morphemes)
 
-      # number of correct morphemes
-      tpos : list[str] = [morpheme for morpheme in result_morphemes if morpheme in gold_morphemes]
-      fneg : list[str] = [morpheme for morpheme in gold_morphemes if morpheme not in result_morphemes]
-
       # calculate f1
+      tpos : list[str] = [morpheme for morpheme in result_morphemes if morpheme in gold_morphemes]
+
       precision : float = len(tpos) / len(result_morphemes)
       recall : float = len(tpos) / len(gold_morphemes)
 
@@ -60,4 +68,3 @@ if __name__ == "__main__":
    results = ["a-b-c", "a-b-cd", "a-b-cd-e"]
    avg_error, avg_precision, avg_recall, avg_f1 = MorphemeScorer.score_set(gold_standards, results, "-")
    print(avg_error, avg_precision, avg_recall, avg_f1)
-      

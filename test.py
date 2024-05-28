@@ -1,3 +1,14 @@
+##############################################
+# Author : Carter Anderson
+# Professor : Rolando Coto-Solano
+# Date : 2024-05-27 (YYYY-MM-DD)
+# Purpose : LING48 Final Project, 24S, Dartmouth College
+# Description : This script trains BPE, WordPiece, and Morfessor tokenizers 
+# on the Bribri corpus, and then tests them on a set of test word against
+# the Morphemo segmented. The script outputs the results of the testing in 
+# a tabular format.
+##############################################
+
 import MorphemeScorer
 import math
 from tqdm import tqdm
@@ -69,28 +80,27 @@ def main() -> None:
       test_words_raw : list[str] = f.readlines()
       test_words : list[str] = [test_word.strip("\n") for test_word in test_words_raw]
 
+   # shuffle the data and break into chunks
    q_and_a : list[tuple[str, str]] = list(zip(gold_standards, test_words))
    random.shuffle(q_and_a)
 
    n_chunks : int = 10
    chunks : list[list[tuple[str, str]]] = [q_and_a[i:i + len(q_and_a) // n_chunks] for i in range(0, len(q_and_a), len(q_and_a) // n_chunks)]
 
+   # initialize the scores
    bpe_score : np.ndarray = np.array([0., 0., 0., 0.])
    wp_score : np.ndarray = np.array([0., 0., 0., 0.])
    mf_score : np.ndarray = np.array([0., 0., 0., 0.])
    morphemo_score : np.ndarray = np.array([0., 0., 0., 0.])
-
    num_tested = 0
 
    for i in tqdm(range(n_chunks)):
       # perform split for a test and training set, based on the n_chunks
-      
       test : list[tuple[str, str]] = chunks[i]
       train : list[tuple[str, str]] = [pair for j, chunk in enumerate(chunks) if j != i for pair in chunk]
 
       test = [(gold_standard, test_word) for gold_standard, test_word in test if len(gold_standard.split("+")) > 0]
       num_tested += len(test)
-      
 
       # create training file for Morphemo and train
       with open("morphemo_training_morphs.txt", "w", encoding = "utf8") as f:
