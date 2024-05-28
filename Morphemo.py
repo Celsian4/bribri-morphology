@@ -26,27 +26,34 @@ class Morphemo:
    # unseen bias
    UNSEEN_BIAS : float = 2
 
-   def __init__(self, *text_files : str, morph_file : str, start_token : str = "<s>", end_token : str = "</s>", morph_token : str = "+", lookahead : int = 2, UNSEEN_BIAS : float = 2):
-      
+   def __init__(self, start_token : str = "<s>", end_token : str = "</s>", morph_token : str = "+", lookahead : int = 2, UNSEEN_BIAS : float = 2):
       self.UNSEEN_BIAS = UNSEEN_BIAS
       self.lookahead = lookahead
-      # load text probabilities (same indices because it is a square matrix)
-      self.text_forward_prob, self.text_forward_index, temp = self.probability_loader(*text_files, lookahead=lookahead)
-      self.text_backward_prob, temp, self.text_backward_index = self.probability_loader(*text_files, reversed=True, lookahead=lookahead)
-
-      # load morpheme probabilities
-      self.morph_forward_prob, self.morph_forward_index, temp = self.probability_loader(morph_file, filter_token="+", lookahead=1)
-      self.morph_backward_prob, temp, self.morph_backward_index = self.probability_loader(morph_file, filter_token="+", reversed=True, lookahead=lookahead)
 
       # set start, end, morphology tokens
       self.start_token = start_token
       self.end_token = end_token
       self.morph_token = morph_token
 
-      # load morpheme frequency data
-      self.morph_freq_data = self.morphemes_percentage(morph_file)
+   def train(self, untagged_file : str, morph_file : str) -> None:
+      with open(untagged_file, 'r', encoding="utf8") as f:
+         untagged_text : str = f.read().split()
 
-   def probability_loader(self, *text_files : str, filter_token : str = None, lookahead : int = 1, reversed : bool = False) -> np.ndarray:
+      with open(morph_file, 'r', encoding="utf8") as f:
+         morph_text : str = f.read().split()
+
+      # load text probabilities (same indices because it is a square matrix)
+      self.text_forward_prob, self.text_forward_index, temp = self.probability_loader(untagged_text, lookahead=self.lookahead)
+      self.text_backward_prob, temp, self.text_backward_index = self.probability_loader(untagged_text, reversed=True, lookahead=self.lookahead)
+
+      # load morpheme probabilities
+      self.morph_forward_prob, self.morph_forward_index, temp = self.probability_loader(morph_text, filter_token="+", lookahead=1)
+      self.morph_backward_prob, temp, self.morph_backward_index = self.probability_loader(morph_text, filter_token="+", reversed=True, lookahead=self.lookahead)
+
+      # load morpheme frequency data
+      self.morph_freq_data = self.morphemes_percentage(morph_text)
+
+   def probability_loader(self, text = list[str], filter_token : str = None, lookahead : int = 1, reversed : bool = False) -> np.ndarray:
       """
       Loads text files and calculates the probability of each x-gram following another character.
 
@@ -59,27 +66,7 @@ class Morphemo:
       Returns:
       @return probabilities: np array of probabilities
       """
-      # accounts for non-inclusive range
-
-      # read in each text file
-      text : list[str] = []
-      words : list[list[str]] = []
-      for text_file in text_files:
-         if not text_file.endswith(".txt"):
-            raise ValueError("Only text files are accepted.")
-         else:
-            with open(text_file, 'r', encoding="utf8") as f:
-               text += f.readlines()
-      
-         # Process text into a list of words (as lists of characters)
-         text = [line.strip() for line in text]
-         
-         for line in text:
-            for word in line.split():
-               words += [self.word_cutter(word, self.start_token, self.end_token)]
-
-      # TODO: add lookahead functionality to grab x-grams
-      # TODO: change
+      words = [self.word_cutter(word, self.start_token, self.end_token) for word in text]
 
       # enumerate all characters and assign an index to them
       set_chars : set[str] = set()
@@ -137,29 +124,23 @@ class Morphemo:
 
       return probabilities, char_to_index, gram_to_index
 
-   def morphemes_percentage(self, morpheme_file : str) -> np.ndarray:
-      with open(morpheme_file, 'r', encoding="utf8") as f:
-         text : list[str] = f.readlines()
-      
-      text = [line.lower().strip() for line in text]
-
+   def morphemes_percentage(self, morphemes : list[str]) -> np.ndarray:
       morpheme_freq : list[tuple[int, int]] = []
       max_morphemes = 0
       max_wordlength = 0
 
-      for line in text:
-         for word in line.split():
-            word_chars : list[str] = self.word_cutter(word, "<s>", "</s>")
-            morph_count : int = word_chars.count("+")
-            word_length : int = len(word_chars)
+      for word in morphemes:
+         word_chars : list[str] = self.word_cutter(word, "<s>", "</s>")
+         morph_count : int = word_chars.count("+")
+         word_length : int = len(word_chars)
 
-            # update max values for data array dimensions
-            if word_length > max_wordlength:
-               max_wordlength = word_length
-            if morph_count > max_morphemes:
-               max_morphemes = morph_count
+         # update max values for data array dimensions
+         if word_length > max_wordlength:
+            max_wordlength = word_length
+         if morph_count > max_morphemes:
+            max_morphemes = morph_count
 
-            morpheme_freq.append((word_length, morph_count))
+         morpheme_freq.append((word_length, morph_count))
 
       # create data array
       morph_freq_data = np.zeros((max_wordlength + 1, max_morphemes + 1))
@@ -174,8 +155,6 @@ class Morphemo:
             np.log10(row / np.sum(row), out=row, where=row!=0)
 
       morph_freq_data[morph_freq_data==0] = self.UNSEEN_BIAS * np.min(morph_freq_data[morph_freq_data!=0])
-
-      print(morph_freq_data)
 
       return morph_freq_data
 
@@ -193,25 +172,16 @@ class Morphemo:
          morph_prob[i] = (self.morph_prob(word[i], tuple(word[i+1:i+self.lookahead+1])), i)
 
       morph_prob.sort(key=lambda x: x[0], reverse=True)
-      for morph in morph_prob:
-         print(f"{morph[0]:.2}, {morph[1]}, {word[morph[1]]}, {word[morph[1]+1:morph[1]+self.lookahead+1]}")
 
       # determine likelihood of morphemes that are present
       n_morphemes : int = 0
       morph_indexes : list[int] = []
       for morph, i in morph_prob:
-         print(base_prob[i] + self.get_morph_count_freq(len(word), n_morphemes), ",", morph + self.get_morph_count_freq(len(word), n_morphemes+1))
          if base_prob[i] + self.get_morph_count_freq(len(word), n_morphemes) < morph + self.get_morph_count_freq(len(word), n_morphemes+1):
             n_morphemes += 1
             morph_indexes.append(i+1)
 
       return morph_indexes
-
-      morphed : list[str] = self.word_morpher(word, self.morph_token, sorted(morph_indexes))
-
-      return morphed
-   
-   
 
    def point_prob(self, before : str, after : tuple[str]) -> float:
       forward : float
@@ -221,17 +191,13 @@ class Morphemo:
       if before in self.text_forward_index and after in self.text_backward_index:
          forward = self.text_forward_prob[self.text_forward_index[before], self.text_backward_index[after]]
       else:
-         forward = self.text_forward_prob.min()
+         forward = self.text_forward_prob.min() * self.UNSEEN_BIAS
       # calculate backward looking probability
       if after in self.text_backward_index and before in self.text_forward_index:
          backward = self.text_backward_prob[self.text_backward_index[after], self.text_forward_index[before]]
       else:
-         backward = self.text_backward_prob.min()
+         backward = self.text_backward_prob.min() * self.UNSEEN_BIAS
 
-      # if forward < backward:
-      #    forward = -1 * math.sqrt(abs(forward))
-      # else:
-      #    backward = -1 * math.sqrt(abs(backward))
       return forward + backward
    
    def morph_prob(self, before : str, after : str) -> float:
@@ -241,21 +207,14 @@ class Morphemo:
       if before in self.morph_forward_index:
          forward = self.morph_forward_prob[self.morph_forward_index[before]][0]
       else:
-         forward = self.morph_forward_prob.min()
+         forward = self.morph_forward_prob.min() * self.UNSEEN_BIAS
 
       # calculate backward looking probability
       if after in self.morph_backward_index:
          backward = self.morph_backward_prob[self.morph_backward_index[after]][0]
       else:
-         backward = self.morph_backward_prob.min()
+         backward = self.morph_backward_prob.min() * self.UNSEEN_BIAS
 
-      # if forward < backward:
-      #    forward = -1 * math.sqrt(abs(forward))
-      # else:
-      #    backward = -1 * math.sqrt(abs(backward))
-
-      # TODO: remove debug print
-      #print(f"{before = }, {after = }, \n\t{forward = }, {backward = }")
       return forward + backward
    
    def get_morph_count_freq(self, word_length : int, morph_count : int) -> float:
@@ -273,12 +232,6 @@ class Morphemo:
       if word_length >= self.morph_freq_data.shape[0] or morph_count >= self.morph_freq_data.shape[1]:
          return self.UNSEEN_BIAS * np.min(self.morph_freq_data)
       return self.morph_freq_data[word_length, morph_count]
-
-
-   def f1_score():
-      # TODO: implement f1 score calculation
-
-      raise NotImplementedError
 
    @staticmethod
    def word_cutter(word : str, start_token : str, end_token : str) -> list[str]:
@@ -333,14 +286,10 @@ class Morphemo:
       return "".join(word_list[1:len(word_list)-1])
 
 if __name__ == '__main__':
-   morphemo : Morphemo = Morphemo("bribri-unmarked-text.txt", morph_file="bribri-conllu-20240314-tokenized-handcorrect.txt", UNSEEN_BIAS=2, lookahead=2)
-   print((morphemo.ortho_morpher("shkèxnã")))
-   print((morphemo.ortho_morpher("ujtóqkwã")))
-   print((morphemo.ortho_morpher("bua'ë")))
-   print((morphemo.ortho_morpher("kie")))
-   print((morphemo.ortho_morpher("daléqnẽ")))
-   print((morphemo.ortho_morpher("akéqkëpa")))
-   print((morphemo.ortho_morpher("stsö")))
-   print((morphemo.ortho_morpher("kalòqtë'")))
-   print((morphemo.ortho_morpher("bikâkala")))
-   print((morphemo.ortho_morpher("akéqpa")))
+   morphemo : Morphemo = Morphemo(UNSEEN_BIAS=2, lookahead=2)
+   morphemo.train("bribri-unmarked-corpus.txt", "bribri-conllu-goldstandard-corpus.txt")
+   
+   
+
+
+   
