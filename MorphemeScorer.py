@@ -1,8 +1,17 @@
+##############################################
+# Author : Carter Anderson
+# Email : carter.d.anderson.26@dartmouth.edu
+# Date : 2024-05-27 (YYYY-MM-DD)
+# Purpose : LING48 Final Project, 24S, Dartmouth College
+# Description : This helper script contains the functions necessary to
+#    score morpheme segmentation results against gold standards.
+##############################################
+
 class MorphemeScorer: 
    """Class to score morpheme segmentation results against gold standards."""
 
    @staticmethod
-   def score_set(gold_standards : list[list[str]], results : list[list[str]]) -> tuple[float, float, float, float]:
+   def score_set(gold_standards : list[list[str]], results : list[list[str]], *, word_wise : bool = False) -> tuple[float, float, float, float]:
       """
       Score a set of morpheme segmentation results against gold standards.
 
@@ -23,21 +32,28 @@ class MorphemeScorer:
       # iterate through each pair of gold standard and result
       for gold_standard, result in zip(gold_standards, results):
          error, precision, recall, f1 = MorphemeScorer.score(gold_standard, result)
+
          total_error += error
-         total_precision += precision
-         total_recall += recall
-         total_f1 += f1
+         total_precision += precision * max(len(gold_standard) * int(not word_wise), 1)
+         total_recall += recall * max(len(gold_standard) * int(not word_wise), 1)
+         total_f1 += f1 * max(len(gold_standard) * int(not word_wise), 1)
+
+
+      if word_wise:
+         divisor = len(gold_standards)
+      else:
+         divisor = sum([len(gold_standard) for gold_standard in gold_standards])
 
       # calculate average
-      avg_error : float = total_error / len(gold_standards)
-      avg_precision : float = total_precision / len(gold_standards)
-      avg_recall : float = total_recall / len(gold_standards)
-      avg_f1 : float = total_f1 / len(gold_standards)
+      avg_error : float = total_error / len(gold_standards) # inherently word-wise
+      avg_precision : float = total_precision / divisor
+      avg_recall : float = total_recall / divisor
+      avg_f1 : float = total_f1 / divisor
 
-      return avg_error, avg_precision, avg_recall, avg_f1
+      return avg_error, avg_precision, avg_recall, avg_f1, divisor
 
    @staticmethod
-   def score(gold_morphemes : list[str], result_morphemes : list[str]) -> tuple[bool, float, float, float]:
+   def score(gold_morphemes : list[str], result_morphemes : list[str]) -> tuple[float, float, float, float]:
       """
       Score a single morpheme segmentation result against a gold standard.
       
@@ -50,7 +66,7 @@ class MorphemeScorer:
       """
       
       # boolean of error, 1 if error, 0 if no error
-      error : bool = not(gold_morphemes == result_morphemes)
+      error : int = int(not(gold_morphemes == result_morphemes))
 
       # calculate f1
       tpos : list[str] = [morpheme for morpheme in result_morphemes if morpheme in gold_morphemes]

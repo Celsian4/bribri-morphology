@@ -1,6 +1,6 @@
 ##############################################
 # Author : Carter Anderson
-# Professor : Rolando Coto-Solano
+# Email : carter.d.anderson.26@dartmouth.edu
 # Date : 2024-05-27 (YYYY-MM-DD)
 # Purpose : LING48 Final Project, 24S, Dartmouth College
 # Description : This script contains the Morphemo class, which contains

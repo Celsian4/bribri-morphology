@@ -1,6 +1,6 @@
 ##############################################
 # Author : Carter Anderson
-# Professor : Rolando Coto-Solano
+# Email : carter.d.anderson.26@dartmouth.edu
 # Date : 2024-05-27 (YYYY-MM-DD)
 # Purpose : LING48 Final Project, 24S, Dartmouth College
 # Description : This script trains BPE, WordPiece, and Morfessor tokenizers 
@@ -92,14 +92,15 @@ def main() -> None:
    wp_score : np.ndarray = np.array([0., 0., 0., 0.])
    mf_score : np.ndarray = np.array([0., 0., 0., 0.])
    morphemo_score : np.ndarray = np.array([0., 0., 0., 0.])
-   num_tested = 0
+   num_tested : int = 0
+   weight_sum : int = 0
 
    for i in tqdm(range(n_chunks)):
       # perform split for a test and training set, based on the n_chunks
       test : list[tuple[str, str]] = chunks[i]
       train : list[tuple[str, str]] = [pair for j, chunk in enumerate(chunks) if j != i for pair in chunk]
 
-      test = [(gold_standard, test_word) for gold_standard, test_word in test if len(gold_standard.split("+")) > 0]
+      test = [(gold_standard, test_word) for gold_standard, test_word in test if len(gold_standard.split("+")) >= 2]
       num_tested += len(test)
 
       # create training file for Morphemo and train
@@ -121,19 +122,32 @@ def main() -> None:
       wp_results = [[morph.replace("##", "") for morph in word] for word in wp_results_raw]
       morphemo_results = [word.split("+") for word in morphemo_results_raw]
 
+      #WORDWISE
+      wordwise : bool = False
+
       # score the results
-      bpe_score += np.asarray(MorphemeScorer.MorphemeScorer.score_set(gold_standards, bpe_results))
-      wp_score += np.asarray(MorphemeScorer.MorphemeScorer.score_set(gold_standards, wp_results))
-      mf_score += np.asarray(MorphemeScorer.MorphemeScorer.score_set(gold_standards, mf_results))
-      morphemo_score += np.asarray(MorphemeScorer.MorphemeScorer.score_set(gold_standards, morphemo_results))
+      bpe_output = MorphemeScorer.MorphemeScorer.score_set(gold_standards, bpe_results, word_wise=wordwise)
+      bpe_score_change = bpe_output[:4]
+
+      # keep morpheme count for divisor
+      divisor = bpe_output[4]
+      weight_sum += divisor
+
+      # add the scores to the running total
+      bpe_score += np.asarray(bpe_score_change, dtype=np.float64) * divisor
+      wp_score += np.asarray(MorphemeScorer.MorphemeScorer.score_set(gold_standards, wp_results, word_wise=wordwise)[:4], dtype=np.float64) * divisor
+      mf_score += np.asarray(MorphemeScorer.MorphemeScorer.score_set(gold_standards, mf_results, word_wise=wordwise)[:4], dtype=np.float64) * divisor
+      morphemo_score += np.asarray(MorphemeScorer.MorphemeScorer.score_set(gold_standards, morphemo_results, word_wise=wordwise)[:4], dtype=np.float64) * divisor
 
    # Output results to console in tabular format
    print("\n{0:10s}\t{1:4s}\t{2:4s}\t{3:4s}\t{4:4s}".format("Model", "ER", "P", "R", "F1"))
-   print("{0:10s}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".format("BPE", *(bpe_score / n_chunks)))
-   print("{0:10s}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".format("WordPiece", *(wp_score / n_chunks)))
-   print("{0:10s}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".format("Morfessor", *(mf_score / n_chunks)))
-   print("{0:10s}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".format("Morphemo", *(morphemo_score / n_chunks)))
+   print("{0:10s}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".format("BPE", *(bpe_score / weight_sum)))
+   print("{0:10s}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".format("WordPiece", *(wp_score / weight_sum)))
+   print("{0:10s}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".format("Morfessor", *(mf_score / weight_sum)))
+   print("{0:10s}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".format("Morphemo", *(morphemo_score / weight_sum)))
    print("Number of words tested: ", num_tested)
+   print("Number of morphemes tested: ", weight_sum)
+   print(f"Wordwise Operation: {wordwise}")
 
 if __name__ == "__main__":
    # perform the training and testing with provided seed, 4 arbitrarily selected
