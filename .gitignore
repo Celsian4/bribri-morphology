@@ -4,3 +4,4 @@ bribri-unmarked-text.txt
 # ignore non-necessary bribri text
 depricated_bribri
 __pycache__
+.Ds_Store
