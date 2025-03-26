@@ -8,7 +8,22 @@
 ##############################################
 
 import numpy as np
+import pandas as pd
 import Morphemo
+import random
+import contextlib
+
+@contextlib.contextmanager
+def rand_state(seed : int | None = None):
+   """
+   Context manager to control the random seed for reproducibility.
+   """
+   state: tuple [Any, ...]= random.getstate()
+   random.seed(seed)
+   try:
+      yield
+   finally:
+      random.setstate(state)
 
 class Morphemo:
    """
@@ -80,6 +95,7 @@ class Morphemo:
 
       # load morpheme frequency data
       self.morph_freq_data = self.morphemes_percentage(morph_text)
+
 
    def probability_loader(self, text = list[str], filter_token : str = None, lookahead : int = 1, reversed : bool = False) -> np.ndarray:
       """
@@ -224,7 +240,8 @@ class Morphemo:
       n_morphemes : int = 0
       morph_indexes : list[int] = []
       for morph, i in morph_prob:
-         if base_prob[i] + self.get_morph_count_freq(len(word), n_morphemes) < morph + self.get_morph_count_freq(len(word), n_morphemes+1):
+         #+ self.get_morph_count_freq(len(word), n_morphemes)
+         if base_prob[i]  < morph: #+ self.get_morph_count_freq(len(word), n_morphemes+1):
             n_morphemes += 1
             morph_indexes.append(i+1)
 
@@ -352,11 +369,43 @@ class Morphemo:
 
       return "".join(word_list[1:len(word_list)-1])
 
-if __name__ == '__main__':
+def test10():
    morphemo : Morphemo = Morphemo(UNSEEN_BIAS=2, lookahead=2)
    morphemo.train("bribri-unmarked-corpus.txt", "bribri-conllu-goldstandard-corpus.txt")
    
    
+   # randomly select 10 words
+   with open("bribri-conllu-20240314-corpus.txt", "r") as f:
+      with open("bribri-conllu-goldstandard-corpus.txt", "r") as g:
 
-
+         # read in the test words and gold standards
+         test_words_raw : list[str] = f.readlines()
+         gold_standards_raw : list[str] = g.readlines()
    
+   # strip the newline characters
+   test_words : list[str] = [test_word.strip("\n") for test_word in test_words_raw]
+   gold_standards : list[str] = [gold_standard.strip("\n") for gold_standard in gold_standards_raw]
+
+   # produce pairs of gold standards and test words
+   q_and_a : list[tuple[str, str]] = list(zip(gold_standards, test_words))
+   random.shuffle(q_and_a)
+   test_words = [pair[1] for pair in q_and_a]
+   gold_standards = [pair[0] for pair in q_and_a]
+   
+   
+
+   for word, gold_standard in zip(test_words[0:10], gold_standards[0:10]):
+      output = f"""
+      Word: {word}
+      \tPredicted Morphemes: {morphemo.ortho_morpher(word)}
+      \tActual Morphemes: {gold_standard}
+      """
+
+      print(output)
+
+if __name__ == '__main__':
+   # control for random state
+   # 41 chosen because it exhibits both success and failure cases
+   with rand_state(41):
+      test10()
+      
