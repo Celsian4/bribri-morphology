@@ -634,7 +634,8 @@ be'
 k+ũ
 chk+óqk
 ie'
-bákàrros
+bák
+àrros
 ñ+ũk
 kèq
 sa'
@@ -715,7 +716,6 @@ ie'
 tk+ë'r+kã
 kabàiö
 kĩ
-#
 ie'
 wã
 i
